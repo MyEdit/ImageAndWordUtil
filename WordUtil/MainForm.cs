@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Office.Interop.Word;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -12,6 +13,8 @@ namespace WordUtil
         {
             InitializeComponent();
         }
+
+        //Image util start
 
         //Событие при дропе файла на панель
         private void PanelDragAndDrop_DragDrop(object sender, DragEventArgs e)
@@ -84,5 +87,66 @@ namespace WordUtil
         {
             DataBaseWorker.ExecuteQueryWithoutResponse($"UPDATE Medicines SET Photo = '{pictureBox2.Tag}' WHERE ID = {ID.Text}");
         }
+
+        //Image util end
+        //Word util start
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            string inputWordDoc = AppDomain.CurrentDomain.BaseDirectory + "Check.docx";
+            string outputWordDoc = AppDomain.CurrentDomain.BaseDirectory + "CheckOut.pdf";
+
+            Dictionary<string, string> replacements = new Dictionary<string, string>
+            {
+                {"<Num>", textBoxNum.Text},
+                {"<Cashier>", textBoxCashier.Text},
+                {"<NumCash>", textBoxNumCash.Text},
+                {"<Date>", DateTime.Now.Date.ToString()},
+                {"<Service1>", textBoxService1.Text},
+                {"<Service2>", textBoxService2.Text},
+                {"<Service3>", textBoxService3.Text},
+                {"<Quality1>", textBoxQuality1.Text},
+                {"<Quality2>", textBoxQuality2.Text},
+                {"<Quality3>", textBoxQuality3.Text},
+                {"<Cost1>", textBoxCost1.Text},
+                {"<Cost2>", textBoxCost2.Text},
+                {"<Cost3>", textBoxCost3.Text}
+            };
+            replaceTagsInWordDoc(inputWordDoc, outputWordDoc, replacements);
+        }
+
+        private bool replaceTagsInWordDoc(string inputWordDoc, string outputWordDoc, Dictionary<string, string> replacements)
+        {
+            Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
+
+            try
+            {
+                Document document = wordApp.Documents.Open(inputWordDoc, ReadOnly: true);
+                Range range = document.Content;
+                Document newDoc = wordApp.Documents.Add();
+                range.Copy();
+                newDoc.Range().Paste();
+
+                foreach (var replacement in replacements)
+                {
+                    newDoc.Content.Find.Execute(FindText: replacement.Key, ReplaceWith: replacement.Value, Replace: WdReplace.wdReplaceAll);
+
+                }
+
+                newDoc.SaveAs2(outputWordDoc, WdSaveFormat.wdFormatPDF);
+                newDoc.Close(SaveChanges: false);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Произошла ошибка при формировании чека " + ex.Message);
+                return false;
+            }
+            finally
+            {
+                wordApp.Quit();
+            }
+        }
+        //Word util end
     }
 }
